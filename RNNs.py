@@ -2,14 +2,13 @@ import re
 from collections import defaultdict
 from os import listdir
 from os.path import isfile
+from DataReader import DataReader
 
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow.compat.v1 as tf
+
 tf.disable_v2_behavior()
-
-from DataReader import DataReader
-
 
 NUM_CLASSES = 20
 MAX_DOC_LENGTH = 500
@@ -41,26 +40,23 @@ def gather_20newsgroups_data():
         return data
 
     word_count = defaultdict(int)
-
     path = './datasets/20news-bydate/'
     train_dir, test_dir = (path + '20news-bydate-train/', path + '20news-bydate-test/')
-
     list_newsgroups = [newsgroup for newsgroup in listdir(train_dir)]
     list_newsgroups.sort()
-
     train_data = collect_data_from(train_dir, list_newsgroups, word_count)
+
+    # collect and generate vocab
     vocab = [word for word, freq
              in zip(word_count.keys(), word_count.values()) if freq > 10]
     vocab.sort()
-
     with open('./datasets/w2v/vocab-raw.txt', 'w') as f:
         f.write('\n'.join(vocab))
 
+    # collect raw data
     test_data = collect_data_from(test_dir, list_newsgroups)
-
     with open('./datasets/w2v/20news-train-raw.txt', 'w') as f:
         f.write('\n'.join(train_data))
-
     with open('./datasets/w2v/20news-test-raw.txt', 'w') as f:
         f.write('\n'.join(test_data))
 
@@ -72,14 +68,11 @@ def encode_data(data_path, vocab_path):
         vocab["*unknown_ID"] = 0
         vocab["*padding_ID"] = 1
 
-    print(vocab)
-
     with open(data_path) as f:
         documents = [(line.split("<fff>")[0], line.split("<fff>")[1], line.split("<fff>")[2])
                      for line in f.read().splitlines()]
 
     encoded_data = []
-
     for document in documents:
         label, doc_id, text = document
         words = text.split()[:MAX_DOC_LENGTH]
@@ -146,7 +139,7 @@ class RNN:
             cell=lstm_cell,
             inputs=lstm_inputs,
             initial_state=initial_state,
-            sequence_length = self._sentence_lengths
+            sequence_length=self._sentence_lengths
         )  # a length-500 list of [num_docs, lstm_size]
 
         lstm_outputs = tf.unstack(tf.transpose(lstm_outputs, perm=[1, 0, 2]))
@@ -195,7 +188,7 @@ class RNN:
             logits=logits
         )
 
-        loss= tf.reduce_mean(loss)
+        loss = tf.reduce_mean(loss)
 
         probs = tf.nn.softmax(logits)
         predicted_labels = tf.argmax(probs, axis=1)
